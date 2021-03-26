@@ -15,6 +15,14 @@ trevor_ip = "127.0.0.1"
 trevor_srvr_port = 12002
 trevor_client_port = 12003
 
+my_ip = "127.0.0.1"
+my_srvr_port = 0
+my_client_port = 0
+
+friend_ip = "127.0.0.1"
+friend_srvr_port = 0
+friend_client_port = 0
+
 
 
 class GUI:
@@ -32,33 +40,46 @@ class GUI:
         self.window.mainloop()
 
 
-def client_func(user):
+def client_thread():
     client_socket = socket(AF_INET, SOCK_STREAM)
+    # client_socket.bind((my_ip, my_client_port))
+
+    try:
+        client_socket.connect((friend_ip, friend_srvr_port))
+    except:
+        client_socket.close()
+        return False
+        #think this will be handled by enter button
+    while True:
+        msg = input("Enter a message: ")
+        client_socket.send(msg.encode())
+
+
+def start_func(user):
+    # client_socket = socket(AF_INET, SOCK_STREAM)
+    global my_srvr_port
+    global my_client_port
+    global friend_srvr_port
+    global friend_client_port
 
     if user == "Derek":
-        client_socket.bind((derek_ip, derek_client_port))
+        my_srvr_port = derek_srvr_port
+        my_client_port = derek_client_port
+        friend_srvr_port = trevor_srvr_port
+        friend_client_port = trevor_client_port
 
-        try:
-            client_socket.connect((trevor_ip, trevor_srvr_port))
-        except:
-            client_socket.close()
-            srvr_func(derek_ip, derek_srvr_port)
     elif user == "Trevor":
-        client_socket.bind((trevor_ip, trevor_client_port))
-
-        try:
-            client_socket.connect((derek_ip, derek_srvr_port))
-        except:
-            client_socket.close()
-            srvr_func(trevor_ip, trevor_srvr_port)
+        my_srvr_port = trevor_srvr_port
+        my_srvr_port = trevor_client_port
+        friend_srvr_port = derek_srvr_port
+        friend_client_port = derek_client_port
     
-    client_socket.setblocking(0)
-    client_socket.send("Hi".encode())
+    start_new_thread(client_thread,())
+    start_new_thread(srvr_func, ())
+    # start_new_thread(client_thread, ())
+    
+    
 
-    while True:
-        # client_socket.send("Hi".encode())
-        # print(client_socket.recv(1024).decode())
-        polling(client_socket)
 
 # def client_func():
 #     client_socket = socket(AF_INET, SOCK_STREAM)
@@ -77,17 +98,20 @@ def client_func(user):
 #     # client_socket.setblocking(0)
 
 
-def srvr_func(ip, port):
+def srvr_func():
     srvr_socket = socket(AF_INET, SOCK_STREAM)
-    srvr_socket.bind((ip, port))
+    srvr_socket.bind((my_ip, my_srvr_port))
     # srvr_socket.setblocking(0)
     srvr_socket.listen(1)
+    print("hi")
+    # client_thread()
 
     while True:
         conn_sock, addr = srvr_socket.accept()
-        conn_sock.setblocking(0)
+        # conn_sock.setblocking(0)
 
-        start_new_thread(polling, (conn_sock,))
+        start_new_thread(srvr_thread, (conn_sock,))
+        # start_new_thread(client_thread, )
 # def srvr_func():
 #     srvr_socket = socket(AF_INET, SOCK_STREAM)
 #     # I need a lock for this I think
@@ -103,23 +127,26 @@ def srvr_func(ip, port):
 
 
 def srvr_thread(sckt):
+    start_new_thread(client_thread, ())
+
     while True:
-        msg = ""
         msg = sckt.recv(1024).decode()
         print(msg)
-        sckt.send("Yo".encode())
         # I need a lock for this I think
 
-def polling(sckt):
-    while True:
-        readable, writable, exceptional = select.select([sckt], [sckt], [sckt])
+# def polling(sckt):
+#     while True:
+#         readable, writable, exceptional = select.select([sckt], [sckt], [sckt])
 
-        for item in writable:
-            
+#         for item in writable:
+
 
 
 name = input("Input user name: ")
-client_func(name)
+start_func(name)
+# start_new_thread(client_thread, ())
+# print("Hi")
+# srvr_func()
 # window = GUI()
 # start_new_thread(client_func, ())
 # start_new_thread(srvr_func, ())
