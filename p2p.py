@@ -104,13 +104,34 @@ class App:
 
         # Emoji components and layout
         # Components
-        self.smile_btn = QPushButton("Smile")
-        self.laugh_btn = QPushButton("Laugh")
-        self.cry_btn = QPushButton("Cry")
-        self.angry_btn = QPushButton("Angry")
+        # self.thumbs_up_btn = QPushButton("\N{thumbs up}")
+        # self.thumbs_down_btn = QPushButton("\N{thumbs down}")
+        # self.smile_btn = QPushButton("\N{grinning face with big eyes}")
+        # self.laugh_btn = QPushButton("\N{rolling on the floor laughing}")
+        # self.cry_btn = QPushButton("\N{loudly crying face}")
+        # self.angry_btn = QPushButton("\N{angry face}")
+
+        self.thumbs_up_btn = QPushButton("\U0001F44D")
+        self.thumbs_down_btn = QPushButton("\U0001F44E")
+        self.smile_btn = QPushButton("\U0001F600")
+        self.laugh_btn = QPushButton("\U0001F923")
+        self.cry_btn = QPushButton("\U0001F631")
+        self.angry_btn = QPushButton("\U0001F620")
+
+        # self.smile_btn.clicked.connect(self.smile_btn_clicked)
+        self.thumbs_up_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F44D"))
+        self.thumbs_down_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F44E"))
+        self.smile_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F600"))
+        self.laugh_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F923"))
+        self.cry_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F631"))
+        self.angry_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F620"))
+        
+
 
         # Layout
         emoji_layout = QHBoxLayout()
+        emoji_layout.addWidget(self.thumbs_up_btn)
+        emoji_layout.addWidget(self.thumbs_down_btn)
         emoji_layout.addWidget(self.smile_btn)
         emoji_layout.addWidget(self.laugh_btn)
         emoji_layout.addWidget(self.cry_btn)
@@ -152,6 +173,7 @@ class App:
             self.msg_display_area.append("Invalid input for your port number.  Must be between 1024 to 49151")
         #start running server
     
+
     def conn_to_friend(self):
         ip_input = self.friend_ip_input.text()
         port_input = self.friend_port_input.text()
@@ -171,7 +193,6 @@ class App:
             self.msg_display_area.append("ERROR: Friend port number entered is not an integer.  Port number must be an integer.")
             return
         
-
         if data >= 1024 and data <= 49151:
             self.msg_display_area.append("Hooray")
             
@@ -181,12 +202,15 @@ class App:
     
     def enter_msg(self):
         msg = self.msg_input_box.text()
-        
 
         if not msg.isspace() and msg != '':
             self.msg_display_area.append("Me: " + msg)
 
 
+    def emoji_btn_clicked(self, emoji_str):
+        msg = msg = self.msg_input_box.text()
+        self.msg_input_box.setText(msg + emoji_str)
+        
 
 if __name__ == "__main__":
 
