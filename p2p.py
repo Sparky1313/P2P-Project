@@ -171,8 +171,12 @@ class App:
             
         else:
             self.msg_display_area.append("Invalid input for your port number.  Must be between 1024 to 49151")
+            return
         #start running server
-    
+
+        self.my_port_input.setDisabled(True)
+        self.sign_in_btn.setDisabled(True)
+
 
     def conn_to_friend(self):
         ip_input = self.friend_ip_input.text()
@@ -198,6 +202,23 @@ class App:
             
         else:
             self.msg_display_area.append("Invalid input for friend port number.  Must be between 1024 to 49151")
+            return
+        
+        self.disable_friend_sel_components()
+
+    
+    def enable_friend_sel_components(self):
+            self.friend_ip_input.setEnabled(True)
+            self.friend_port_input.setEnabled(True)
+            self.connect_btn.setEnabled(True)
+            self.end_btn.setEnabled(True)
+
+
+    def disable_friend_sel_components(self):
+        self.friend_ip_input.setDisabled(True)
+        self.friend_port_input.setDisabled(True)
+        self.connect_btn.setDisabled(True)
+        self.end_btn.setDisabled(True)
     
     
     def enter_msg(self):
