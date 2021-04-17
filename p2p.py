@@ -31,29 +31,70 @@ class App:
     def __init__(self):
         self.app = QApplication([])
 
-        # Message area layout
-        message_area_layout = QVBoxLayout()
-        message_area_layout.addWidget(QTextEdit())
-        message_area_layout.addWidget(QLineEdit())
-
 
         # Host selection components and layout
-        self.ip_field = QLineEdit("Enter IP address to connect to...")
-        self.ip_field = QLineEdit("Enter port number to connect to...")
-        self.connect_btn = QPushButton("Connect")
+        # Components
+        self.friend_ip_input = QLineEdit("Enter friend's IP address to connect to...")
+        self.friend_port_input = QLineEdit("Enter friend's port number to connect to...")
+        self.my_ip_input = QLineEdit("Enter your port to run on...")
 
+        # Layout
         host_selection_layout = QHBoxLayout()
-        host_selection_layout.addWidget(QPushButton("User 1"))
-        host_selection_layout.addWidget(QPushButton("User 2"))
+        host_selection_layout.addWidget(self.friend_ip_input)
+        host_selection_layout.addWidget(self.friend_port_input)
+        host_selection_layout.addWidget(self.my_ip_input)
+
+        
+        # Start and end connection components and layout
+        # Components
+        self.connect_btn = QPushButton("Connect")
+        self.end_btn = QPushButton("End Connection")
+
+        # Layout
+        connection_layout = QHBoxLayout()
+        connection_layout.addWidget(self.connect_btn)
+        connection_layout.addWidget(self.end_btn)
+
+
+        # Message area components and layout
+        # Components
+        self.msg_display_area = QTextEdit("Message Display")
+        self.msg_input = QLineEdit("Message Input")
+
+        #Layout
+        msg_area_layout = QVBoxLayout()
+        msg_area_layout.addWidget(self.msg_display_area)
+        msg_area_layout.addWidget(self.msg_input)
+
+
+        # Emoji components and layout
+        # Components
+        self.smile_btn = QPushButton("Smile")
+        self.laugh_btn = QPushButton("Laugh")
+        self.cry_btn = QPushButton("Cry")
+        self.angry_btn = QPushButton("Angry")
+
+        # Layout
+        emoji_layout = QHBoxLayout()
+        emoji_layout.addWidget(self.smile_btn)
+        emoji_layout.addWidget(self.laugh_btn)
+        emoji_layout.addWidget(self.cry_btn)
+        emoji_layout.addWidget(self.angry_btn)
+
+
 
         # Window layout
         window_layout = QVBoxLayout()
-        window_layout.addLayout(message_area_layout)
         window_layout.addLayout(host_selection_layout)
+        window_layout.addLayout(connection_layout)
+        window_layout.addLayout(msg_area_layout)
+        window_layout.addLayout(emoji_layout)
 
+        
         # Create and show window
         self.window = QWidget()
         self.window.setLayout(window_layout)
+        self.window.setWindowTitle("P2P Chat App")
         self.window.show()
 
 
