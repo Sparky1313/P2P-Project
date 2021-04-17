@@ -1,160 +1,102 @@
-from _thread import *
+import socket
 import threading
-from socket import *
-import tkinter as tk
-import select
-
-# Use these values just for testing.
-# In reality you would have different IP addresses, but
-# could use the same ports.
-derek_ip = "127.0.0.1"
-derek_srvr_port = 12000
-derek_client_port = 12001
-
-trevor_ip = "127.0.0.1"
-trevor_srvr_port = 12002
-trevor_client_port = 12003
-
-my_ip = "127.0.0.1"
-my_srvr_port = 0
-my_client_port = 0
-
-friend_ip = "127.0.0.1"
-friend_srvr_port = 0
-friend_client_port = 0
 
 
-
-class GUI:
-    def __init__(self):
-
-        self.window = tk.Tk()
-        self.window.withdraw()
-
-        self.login = tk.Toplevel()
-        self.login.title("Login")
-        self.login.resizable(width = False, height = False)
-        self.login.configure(width = 500, height = 500)
-        self.name_label = tk.Label(self.login, text = "Name: ", font = "Helvetica 16")
-        self.name_label.place(relheight = 0.3, relx = 0.4, rely = 0.2)
-        self.window.mainloop()
+def create_read_thread(conn_or_sock):
+    print("Read thread started...")
+    while True:
+        recieved_message = conn_or_sock.recv(1024)
+        print (recieved_message.decode())
 
 
-def client_thread():
-    client_socket = socket(AF_INET, SOCK_STREAM)
-    # client_socket.bind((my_ip, my_client_port))
-
+def connect(sock, peer_address):
     try:
-        client_socket.connect((friend_ip, friend_srvr_port))
+        sock.connect(peer_address)
+        print ("Connection successful")
+        read_thread = threading.Thread(target=create_read_thread, args=(sock, ))
+        read_thread.start()
+
     except:
-        client_socket.close()
-        return False
-        #think this will be handled by enter button
-    while True:
-        msg = input("Enter a message: ")
-        client_socket.send(msg.encode())
+        print ("Connection unsuccessful")
 
 
-def start_func(user):
-    # client_socket = socket(AF_INET, SOCK_STREAM)
-    global my_srvr_port
-    global my_client_port
-    global friend_srvr_port
-    global friend_client_port
-
-    if user == "Derek":
-        my_srvr_port = derek_srvr_port
-        my_client_port = derek_client_port
-        friend_srvr_port = trevor_srvr_port
-        friend_client_port = trevor_client_port
-
-    elif user == "Trevor":
-        my_srvr_port = trevor_srvr_port
-        my_srvr_port = trevor_client_port
-        friend_srvr_port = derek_srvr_port
-        friend_client_port = derek_client_port
+def listen_thread(sock):
+    global connection
     
-    start_new_thread(client_thread,())
-    start_new_thread(srvr_func, ())
-    # start_new_thread(client_thread, ())
-    
-    
-
-
-# def client_func():
-#     client_socket = socket(AF_INET, SOCK_STREAM)
-#     # I need a lock for this I think
-#     client_port = input("Client port: ")
-#     client_socket.bind(('127.0.0.1', int(client_port)))
-#     decision = input("Connect to a friend?: ")
-
-#     if decision == 'Y':
-#         friend_ip = input("Enter IP address: ")
-#         friend_port = input("Port number: ")
-#         # client_socket.connect((friend_ip, int(friend_port)))
-#         # client_socket.send("Hi".encode())
-#     else:
-#         print("Okay waiting... then")
-#     # client_socket.setblocking(0)
-
-
-def srvr_func():
-    srvr_socket = socket(AF_INET, SOCK_STREAM)
-    srvr_socket.bind((my_ip, my_srvr_port))
-    # srvr_socket.setblocking(0)
-    srvr_socket.listen(1)
-    print("hi")
-    # client_thread()
-
-    while True:
-        conn_sock, addr = srvr_socket.accept()
-        # conn_sock.setblocking(0)
-
-        start_new_thread(srvr_thread, (conn_sock,))
-        # start_new_thread(client_thread, )
-# def srvr_func():
-#     srvr_socket = socket(AF_INET, SOCK_STREAM)
-#     # I need a lock for this I think
-#     srvr_port = input("Input server port: ")
-#     srvr_socket.bind(('127.0.0.1', int(srvr_port)))
-#     # srvr_socket.setblocking(0)
-#     srvr_socket.listen(1)
-
-#     while True:
-#         conn_sock, addr = srvr_socket.accept()
-
-#         start_new_thread(srvr_thread, (conn_sock,))
-
-
-def srvr_thread(sckt):
-    start_new_thread(client_thread, ())
-
-    while True:
-        msg = sckt.recv(1024).decode()
-        print(msg)
-        # I need a lock for this I think
-
-# def polling(sckt):
-#     while True:
-#         readable, writable, exceptional = select.select([sckt], [sckt], [sckt])
-
-#         for item in writable:
+    sock.listen(1)
+    connection, peer_address = sock.accept()
+    print ("Connected to: ", peer_address)
+    read_thread = threading.Thread(target=create_read_thread, args=(connection, ))
+    read_thread.start()
 
 
 
+
+#boolean to indicate if this peer is acting as the server or not
+connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+is_server = False
+
+#get the name and port the user wants to use
 name = input("Input user name: ")
-start_func(name)
-# start_new_thread(client_thread, ())
-# print("Hi")
-# srvr_func()
-# window = GUI()
-# start_new_thread(client_func, ())
-# start_new_thread(srvr_func, ())
+self_port = int(input("Enter the port number you want to use: "))
 
-# while True:
-#     x = 1
+self_address = ("127.0.0.1", self_port)
+
+#create a tcp socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.bind(self_address)
+
+response = input("Do you want to host? (Y/N)")
+
+if response == "Y":
+    listen_thread = threading.Thread(target=listen_thread, args=(sock, ))
+    listen_thread.start()
+    listen_thread.join()
+    is_server = True
+elif response == "N":
+    #ask the user which port they want to connect to to chat with
+    peer_port = int(input("Which Port Do You Want To Chat With? "))
+    peer_address = ("127.0.0.1", peer_port)
+    connect(sock, peer_address)
+else:
+    print ("invalid input")
 
 
 
+#constantly let the user send messages to the other peer. Send logic also differs from client and server, so need to use the is_server boolean here too
+while True:
+    message = input()
+    if is_server != False:
+        connection.sendall(message.encode())
+    else:
+        sock.sendall(message.encode())
+
+
+
+
+
+'''
+is_server = False
+
+    #try to connect to that port. If connection fails it isn't set up yet, and the use should instead listen for a connection from the peer
+    try:
+        sock.connect(peer_address)
+        print ("Connection successful")
+
+    except:
+        print ("Peer not set up, listening instead...")
+        sock.listen(1)
+        connection, peer_address = sock.accept()
+        print ("Connected to: ", peer_address)
+        is_server = True
+
+    #now spawn a thread to constantly read incoming messages. Read logic differs between client and server, so need to use the is_server boolean
+    if is_server == True:
+        read_thread = threading.Thread(target=create_read_thread, args=(connection, ))
+    else:  
+        read_thread = threading.Thread(target=create_read_thread, args=(sock, ))
+
+    read_thread.start()
+'''
 
 
