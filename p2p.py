@@ -39,7 +39,7 @@ class App:
         self.sign_in_btn = QPushButton("Sign In")
 
         self.my_port_input_lbl.setBuddy(self.my_port_input)
-        # self.sign_in_btn.clicked.connect(self.sign_in())
+        self.sign_in_btn.clicked.connect(self.sign_in)
 
         my_sel_layout = QHBoxLayout()
         my_sel_layout.addWidget(self.my_port_input_lbl)
@@ -58,6 +58,8 @@ class App:
 
         self.friend_ip_input_lbl.setBuddy(self.friend_ip_input)
         self.friend_port_input_lbl.setBuddy(self.friend_port_input)
+        self.connect_btn.clicked.connect(self.conn_to_friend)
+        
 
         # Layout
         friend_sel_layout = QHBoxLayout()
@@ -83,14 +85,21 @@ class App:
         # Message area components and layout
         # Components
         self.msg_display_area = QTextEdit("Message Display")
-        self.msg_input = QLineEdit("Message Input")
+        self.msg_input_box = QLineEdit("Message Input")
+        self.msg_input_box_lbl = QLabel("Input message here:")
 
         self.msg_display_area.setReadOnly(True)
+        self.msg_input_box.returnPressed.connect(self.enter_msg)
+        self.msg_input_box_lbl.setBuddy(self.msg_input_box)
 
         #Layout
+        msg_input_layout = QHBoxLayout()
+        msg_input_layout.addWidget(self.msg_input_box_lbl)
+        msg_input_layout.addWidget(self.msg_input_box)
+
         msg_area_layout = QVBoxLayout()
         msg_area_layout.addWidget(self.msg_display_area)
-        msg_area_layout.addWidget(self.msg_input)
+        msg_area_layout.addLayout(msg_input_layout)
 
 
         # Emoji components and layout
@@ -124,24 +133,58 @@ class App:
         self.window.setWindowTitle("P2P Chat App")
         self.window.show()
 
-    # Widget callbacks
-    # def sign_in(self):
-    #     data = self.my_port_input.text()
+    #Widget callbacks
+    def sign_in(self):
+        str_data = self.my_port_input.text()
+        data = 0
 
-    #     try:
-    #         data = int(data)
-    #     except:
-    #         self.msg_display_area.append("ERROR: Port number entered is not an integer.  Port number must be an integer.")
+        try:
+            data = int(str_data)
+        except:
+            self.msg_display_area.append("ERROR: Your port number entered is not an integer.  Port number must be an integer between 1024 to 49151.")
+            return
         
 
-    #     if data >= 1024 and data <= 49151:
-    #         self.msg_display_area.append("Hooray")
+        if data >= 1024 and data <= 49151:
+            self.msg_display_area.append("Hooray")
             
-    #     else:
-    #         self.msg_display_area.append("Invalid input for your port number.  Must be between 1024 to 49151")
-        # start running server
+        else:
+            self.msg_display_area.append("Invalid input for your port number.  Must be between 1024 to 49151")
+        #start running server
+    
+    def conn_to_friend(self):
+        ip_input = self.friend_ip_input.text()
+        port_input = self.friend_port_input.text()
 
+        # Regex used to check for valid IP address
+        ip_regex_str = re.compile("^(([0-2][0-5][0-5]|[0-1]\d{2}|\d{1,2})\.){3}([0-2][0-5][0-5]|[01]\d{2}|\d{1,2})$")
 
+        if ip_regex_str.match(ip_input):
+            self.msg_display_area.append("Good IP address")
+        else:
+            self.msg_display_area.append("Invalid IP address.  Formatting must be of type XXX.XXX.XXX.XXX and be within 0.0.0.0 to 255.255.255.255")
+            return
+
+        try:
+            data = int(port_input)
+        except:
+            self.msg_display_area.append("ERROR: Friend port number entered is not an integer.  Port number must be an integer.")
+            return
+        
+
+        if data >= 1024 and data <= 49151:
+            self.msg_display_area.append("Hooray")
+            
+        else:
+            self.msg_display_area.append("Invalid input for friend port number.  Must be between 1024 to 49151")
+    
+    
+    def enter_msg(self):
+        msg = self.msg_input_box.text()
+        
+
+        if not msg.isspace() and msg != '':
+            self.msg_display_area.append("Me: " + msg)
 
 
 
