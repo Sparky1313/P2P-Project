@@ -36,7 +36,8 @@ class App:
         # Components
         self.my_port_input = QLineEdit("Enter your port to run on...")
         self.my_port_input_lbl = QLabel("Enter your port number:")
-        self.sign_in_btn = QPushButton("Sign In")
+        self.sign_in_btn = QPushButton("Host")
+        self.sign_in_btn = QPushButton("End Hosting")
 
         self.my_port_input_lbl.setBuddy(self.my_port_input)
         self.sign_in_btn.clicked.connect(self.sign_in)
@@ -174,6 +175,16 @@ class App:
             return
         #start running server
 
+        self.disable_hosting_components()
+        self.disable_friend_sel_components()
+    
+
+    def enable_hosting_components(self):
+        self.my_port_input.setEnabled(True)
+        self.sign_in_btn.setEnabled(True)
+
+    
+    def disable_hosting_components(self):
         self.my_port_input.setDisabled(True)
         self.sign_in_btn.setDisabled(True)
 
@@ -226,6 +237,8 @@ class App:
 
         if not msg.isspace() and msg != '':
             self.msg_display_area.append("Me: " + msg)
+        
+        self.msg_input_box.clear()
 
 
     def emoji_btn_clicked(self, emoji_str):
