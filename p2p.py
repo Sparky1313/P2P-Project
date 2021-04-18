@@ -14,29 +14,35 @@ class App:
         self.friend_port = 0
 
 
-        '''Components and Layout'''
+        '''Start components and layout'''
 
-        # Hosting components and layout
-        # Components
+        ###### Hosting components and layout ######
+
+        # ---Components setup---
         self.my_port_input = QLineEdit("Enter your port to run on...")
         self.my_port_input_lbl = QLabel("Enter your port number:")
         self.start_host_btn = QPushButton("Host")
         self.end_host_btn = QPushButton("End Hosting")
 
+        # ---Initial function calls---
         self.my_port_input_lbl.setBuddy(self.my_port_input)
         self.start_host_btn.clicked.connect(self.start_host)
         self.end_host_btn.clicked.connect(self.end_host)
         self.end_host_btn.setDisabled(True)
 
+        # ---Layout setup---
         my_sel_layout = QHBoxLayout()
         my_sel_layout.addWidget(self.my_port_input_lbl)
         my_sel_layout.addWidget(self.my_port_input)
         my_sel_layout.addWidget(self.start_host_btn)
         my_sel_layout.addWidget(self.end_host_btn)
 
+        ################################################
 
-        # Friend selection components and layout
-        # Components
+
+        ###### Friend selection components and layout ######
+
+        # ---Components setup---
         self.friend_ip_input = QLineEdit("Enter friend's IP address to connect to...")
         self.friend_port_input = QLineEdit("Enter friend's port number to connect to...")
         self.friend_ip_input_lbl = QLabel("Enter friend's IP Address:")
@@ -44,15 +50,15 @@ class App:
         self.connect_btn = QPushButton("Connect")
         self.disconnect_btn = QPushButton("End Connection")
 
+        # ---Initial function calls---
         self.friend_ip_input_lbl.setBuddy(self.friend_ip_input)
         self.friend_port_input_lbl.setBuddy(self.friend_port_input)
         self.connect_btn.clicked.connect(self.conn_to_friend)
         self.disconnect_btn.clicked.connect(self.disconn_from_friend)
         self.enable_friend_sel_components()
         self.disconnect_btn.setDisabled(True)
-        
 
-        # Layout
+        # ---Layout setup---
         friend_sel_layout = QHBoxLayout()
         friend_sel_layout.addWidget(self.friend_ip_input_lbl)
         friend_sel_layout.addWidget(self.friend_ip_input)
@@ -60,48 +66,36 @@ class App:
         friend_sel_layout.addWidget(self.friend_port_input)
         friend_sel_layout.addWidget(self.connect_btn)
         friend_sel_layout.addWidget(self.disconnect_btn)
-        
 
-        # Start and end connection components and layout
-        # Components
-        # self.connect_btn = QPushButton("Connect")
-        # self.end_btn = QPushButton("End Connection")
-
-        # Layout
-        # connection_layout = QHBoxLayout()
-        # connection_layout.addWidget(self.connect_btn)
-        # connection_layout.addWidget(self.end_btn)
+        ################################################
 
 
-        # Message area components and layout
-        # Components
+        ###### Message area components and layout ######
+
+        # ---Components setup---
         self.msg_display_area = QTextEdit("Message Display")
         self.msg_input_box = QLineEdit("Message Input")
         self.msg_input_box_lbl = QLabel("Input message here:")
 
+        # ---Initial function calls
         self.msg_display_area.setReadOnly(True)
         self.msg_input_box.returnPressed.connect(self.enter_msg)
         self.msg_input_box_lbl.setBuddy(self.msg_input_box)
 
-        #Layout
+        # ---Layout setup---
         msg_input_layout = QHBoxLayout()
         msg_input_layout.addWidget(self.msg_input_box_lbl)
         msg_input_layout.addWidget(self.msg_input_box)
-
         msg_area_layout = QVBoxLayout()
         msg_area_layout.addWidget(self.msg_display_area)
         msg_area_layout.addLayout(msg_input_layout)
 
+        ################################################
 
-        # Emoji components and layout
-        # Components
-        # self.thumbs_up_btn = QPushButton("\N{thumbs up}")
-        # self.thumbs_down_btn = QPushButton("\N{thumbs down}")
-        # self.smile_btn = QPushButton("\N{grinning face with big eyes}")
-        # self.laugh_btn = QPushButton("\N{rolling on the floor laughing}")
-        # self.cry_btn = QPushButton("\N{loudly crying face}")
-        # self.angry_btn = QPushButton("\N{angry face}")
 
+        ###### Emoji components and layout ######
+
+        # ---Components setup---
         self.thumbs_up_btn = QPushButton("\U0001F44D")
         self.thumbs_down_btn = QPushButton("\U0001F44E")
         self.smile_btn = QPushButton("\U0001F600")
@@ -109,7 +103,7 @@ class App:
         self.cry_btn = QPushButton("\U0001F631")
         self.angry_btn = QPushButton("\U0001F620")
 
-      
+        # ---Initial function calls
         self.thumbs_up_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F44D"))
         self.thumbs_down_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F44E"))
         self.smile_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F600"))
@@ -117,7 +111,7 @@ class App:
         self.cry_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F631"))
         self.angry_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F620"))
         
-        # Layout
+        # ---Layout setup---
         emoji_layout = QHBoxLayout()
         emoji_layout.addWidget(self.thumbs_up_btn)
         emoji_layout.addWidget(self.thumbs_down_btn)
@@ -126,21 +120,27 @@ class App:
         emoji_layout.addWidget(self.cry_btn)
         emoji_layout.addWidget(self.angry_btn)
 
+        ################################################
 
-        # Window layout
+
+        ###### Window components and layout ######
+
+        # ---Layout setup---
         window_layout = QVBoxLayout()
         window_layout.addLayout(my_sel_layout)
         window_layout.addLayout(friend_sel_layout)
-        # window_layout.addLayout(connection_layout)
         window_layout.addLayout(msg_area_layout)
         window_layout.addLayout(emoji_layout)
-
         
-        # Create and show window
+        # ---Components setup---
         self.window = QWidget()
         self.window.setLayout(window_layout)
         self.window.setWindowTitle("P2P Chat App")
         self.window.show()
+
+        ################################################
+
+        ''' End components and layout '''
 
 
     '''Widget callbacks'''
