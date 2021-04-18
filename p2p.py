@@ -187,7 +187,8 @@ class App:
         except Exception:
             pass
 
-        self.end_conn()
+        # self.end_conn()
+        sock.close()
 
         # Update display
         self.disconn_update_display()
@@ -246,10 +247,11 @@ class App:
             read_thread.start()
 
         except Exception as e:
-            self.end_conn()
+            print("conn_to_friend error: " + str(e))
+            # self.end_conn()
+            sock.close()
             self.disconn_update_display()
             self.msg_display_area.append("Connection unsuccessful:" + str(e))
-            print("conn_to_friend error: " + str(e))
             return
 
         
@@ -265,8 +267,9 @@ class App:
         global sock
 
         # End connection
-        sock.sendall(self.END_CONN_CMD)
-        self.end_conn()
+        sock.sendall(self.END_CONN_CMD.encode())
+        # self.end_conn()
+        sock.close()
 
         # Update display
         self.disconn_update_display()
@@ -285,11 +288,15 @@ class App:
     def end_conn(self):
         global sock
 
-        sock.close()
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.friend_ip = ""
-        self.friend_port = 0
-        self.my_port = 0
+        try:
+
+            sock.close()
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.friend_ip = ""
+            self.friend_port = 0
+            self.my_port = 0
+        except Exception as e:
+            print("end_conn error: " + str(e))
 
     
     # Helper method for changing display
@@ -360,16 +367,22 @@ class App:
         try:
             while True:
                 recvd_msg = sock.recv(5000)
+                msg = recvd_msg.decode()
 
-                if (recvd_msg == self.END_CONN_CMD):
-                    self.end_conn()
+                if (msg == self.END_CONN_CMD):
+                    # self.end_conn()
+                    sock.close()
+                    self.disconn_update_display()
                     return
 
-                self.msg_display_area.append("Friend:\n" + recvd_msg.decode())
-        except Exception:
-            self.end_conn()
-            self.disconn_update_display()
-            self.msg_display_area.append("Unexpected error encounter in connection.  Connection closing...")
+                self.msg_display_area.append("Friend:\n" + msg)
+        except Exception as e:
+            print("reate_read_thread error: " + str(e))
+            # self.end_conn()
+            # self.disconn_update_display()
+            # self.msg_display_area.append("Unexpected error encounter in connection.  Connection closing...")
+            return
+            # pass
         
 
 
@@ -383,18 +396,19 @@ class App:
     #     except Exception:
     #         print ("Connection unsuccessful")
 
-    def connect_peer(self):
-        try:
-            sock.connect((self.friend_ip, self.friend_port))
-            self.msg_display_area.append("Connection successful")
-            read_thread = threading.Thread(target=create_read_thread, args=())
-            read_thread.start()
+    # def connect_peer(self):
+    #     try:
+    #         sock.connect((self.friend_ip, self.friend_port))
+    #         self.msg_display_area.append("Connection successful")
+    #         read_thread = threading.Thread(target=create_read_thread, args=())
+    #         read_thread.start()
 
-        except Exception as e:
-            self.end_conn()
-            self.disconn_update_display()
-            self.msg_display_area.append("Connection unsuccessful")
-            print("connect_peer error: " + str(e))
+    #     except Exception as e:
+    #         # self.end_conn()
+    #         # self.disconn_update_display()
+    #         # self.msg_display_area.append("Connection unsuccessful")
+    #         # print("connect_peer error: " + str(e))
+    #         pass
             
 
     
@@ -404,17 +418,21 @@ class App:
         try:
             sock.listen(1)
             connection, peer_address = sock.accept()
+            print(peer_address)
             sock.close() # I added
             sock = connection # I added
-            self.msg_display_area.append("Connected to: ", peer_address)
+            self.msg_display_area.append("Connected to: " + peer_address[0] + ":" + str(peer_address[1]))
             read_thread = threading.Thread(target=self.create_read_thread, args=())
             read_thread.start()
 
         except Exception as e:
-            self.end_conn()
+            print("listen_thread error: " + str(e))
+            # self.end_conn()
+            sock.close()
             self.disconn_update_display()
             self.msg_display_area.append("Unexpected error while listening for connections.  Hosting stopped...")
-            print("listen_thread error: " + str(e))
+            
+            # pass
     
 # Makes sure threads and sockets close after the window closes
 def on_exit_cleanup():
