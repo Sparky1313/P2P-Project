@@ -4,9 +4,88 @@ from PyQt5.QtWidgets import QApplication, QDialog, QInputDialog, QHBoxLayout, QW
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+
+class ReadThread(QThread):
+    new_msg = pyqtSignal(str)
+    req_end = pyqtSignal()
+
+    def __init__(self, end_cmd, end_cmd_ack):
+        QThread.__init__(self)
+        self.end_cmd = end_cmd
+        self.end_cmd_ack =end_cmd_ack
+    
+
+    def run(self):
+        # self.msg_display_area.append("Read thread started...")
+        try:
+            while True:
+                recvd_msg = sock.recv(5000)
+                print("waiting for message")
+                msg = recvd_msg.decode()
+
+                if msg == self.end_cmd:
+                    self.new_msg.emit(self.end_cmd_ack)
+                    self.req_end.emit()
+                    return
+                
+                if msg == self.end_cmd_ack:
+                    self.req_end.emit()
+                
+                print("going to emit new message")
+                self.new_msg.emit("Friend:\n" + msg)
+                print("emitted new message")
+                # self.msg_display_area.append("Friend:\n" + msg)
+        except Exception as e:
+            print("reate_read_thread error: " + str(e))
+            # sock.close()
+            self.req_end.emit()
+            # self.end_conn()
+            # self.disconn_update_display()
+            # self.msg_display_area.append("Unexpected error encounter in connection.  Connection closing...")
+            return
+            # pass
+
+
+class ListenThread(QThread):
+    new_thread = pyqtSignal()
+
+    def __init__(self):
+        QThread.__init__(self)
+    
+
+    def run(self):
+        global sock
+
+        try:
+            sock.listen(1)
+            connection, peer_address = sock.accept()
+            print(peer_address)
+            sock.close() # I added
+            sock = connection # I added
+            self.new_thread.emit()
+            # self.msg_display_area.append("Connected to: " + peer_address[0] + ":" + str(peer_address[1]))
+            # self.read_thread = ReadThread(self.END_CONN_CMD)
+            # self.read_thread.new_msg.connect(self.append_msg)
+            # self.read_thread.conn_ended.connect(self.disconn_update_display)
+            # self.read_thread.start()
+            # read_thread = threading.Thread(target=self.create_read_thread, args=())
+            # read_thread.start()
+
+        except Exception as e:
+            print("listen_thread error: " + str(e))
+            # self.end_conn()
+            sock.close()
+            self.disconn_update_display()
+            self.msg_display_area.append("Unexpected error while listening for connections.  Hosting stopped...")
+
+    
+
+
+
 class App:
     def __init__(self):
         self.END_CONN_CMD = "!** END_CONNECTION **!"
+        self.END_CONN_CMD_ACK = "!** END_ACK **!"
 
         self.app = QApplication([])
         # self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -167,8 +246,11 @@ class App:
         # Bind socket and start listening
         self.my_port = data
         sock.bind((self.my_ip, self.my_port))
-        listen_thread = threading.Thread(target=self.listen_thread, args=())
-        listen_thread.start()
+        self.listen_thread = ListenThread()
+        self.listen_thread.new_thread.connect(self.create_read_thread)
+        self.listen_thread.start()
+        # listen_thread = threading.Thread(target=self.listen_thread, args=())
+        # listen_thread.start()
 
         # Update display
         self.disable_hosting_components()
@@ -243,8 +325,9 @@ class App:
         try:
             sock.connect((self.friend_ip, self.friend_port))
             self.msg_display_area.append("Connection successful")
-            read_thread = threading.Thread(target=self.create_read_thread, args=())
-            read_thread.start()
+            self.create_read_thread()
+            # read_thread = threading.Thread(target=self.create_read_thread, args=())
+            # read_thread.start()
 
         except Exception as e:
             print("conn_to_friend error: " + str(e))
@@ -285,6 +368,10 @@ class App:
         self.clear_all_inputs()
     
 
+    def append_msg(self, msg):
+        self.msg_display_area.append(msg)
+
+
     def end_conn(self):
         global sock
 
@@ -295,6 +382,7 @@ class App:
             self.friend_ip = ""
             self.friend_port = 0
             self.my_port = 0
+            self.disconn_update_display()
         except Exception as e:
             print("end_conn error: " + str(e))
 
@@ -352,6 +440,7 @@ class App:
             self.msg_display_area.append("Me: " + msg)
         
         sock.sendall(msg.encode())
+        print("sending message")
         
         self.msg_input_box.clear()
 
@@ -360,29 +449,35 @@ class App:
         msg = msg = self.msg_input_box.text()
         self.msg_input_box.setText(msg + emoji_str)
 
-
+    
     def create_read_thread(self):
-        # sock = conn_or_sock # i added
-        self.msg_display_area.append("Read thread started...")
-        try:
-            while True:
-                recvd_msg = sock.recv(5000)
-                msg = recvd_msg.decode()
+        self.read_thread = ReadThread(self.END_CONN_CMD, self.END_CONN_CMD_ACK)
+        self.read_thread.new_msg.connect(self.append_msg)
+        self.read_thread.req_end.connect(self.disconn_update_display)
+        self.read_thread.start()
 
-                if (msg == self.END_CONN_CMD):
-                    # self.end_conn()
-                    sock.close()
-                    self.disconn_update_display()
-                    return
+    # def create_read_thread(self):
+    #     # sock = conn_or_sock # i added
+    #     self.msg_display_area.append("Read thread started...")
+    #     try:
+    #         while True:
+    #             recvd_msg = sock.recv(5000)
+    #             msg = recvd_msg.decode()
 
-                self.msg_display_area.append("Friend:\n" + msg)
-        except Exception as e:
-            print("reate_read_thread error: " + str(e))
-            # self.end_conn()
-            # self.disconn_update_display()
-            # self.msg_display_area.append("Unexpected error encounter in connection.  Connection closing...")
-            return
-            # pass
+    #             if (msg == self.END_CONN_CMD):
+    #                 # self.end_conn()
+    #                 sock.close()
+    #                 self.disconn_update_display()
+    #                 return
+
+    #             self.msg_display_area.append("Friend:\n" + msg)
+    #     except Exception as e:
+    #         print("reate_read_thread error: " + str(e))
+    #         # self.end_conn()
+    #         # self.disconn_update_display()
+    #         # self.msg_display_area.append("Unexpected error encounter in connection.  Connection closing...")
+    #         return
+    #         # pass
         
 
 
@@ -412,25 +507,29 @@ class App:
             
 
     
-    def listen_thread(self):
-        global sock
+    # def listen_thread(self):
+    #     global sock
 
-        try:
-            sock.listen(1)
-            connection, peer_address = sock.accept()
-            print(peer_address)
-            sock.close() # I added
-            sock = connection # I added
-            self.msg_display_area.append("Connected to: " + peer_address[0] + ":" + str(peer_address[1]))
-            read_thread = threading.Thread(target=self.create_read_thread, args=())
-            read_thread.start()
+    #     try:
+    #         sock.listen(1)
+    #         connection, peer_address = sock.accept()
+    #         print(peer_address)
+    #         sock.close() # I added
+    #         sock = connection # I added
+    #         self.msg_display_area.append("Connected to: " + peer_address[0] + ":" + str(peer_address[1]))
+    #         self.read_thread = ReadThread(self.END_CONN_CMD)
+    #         self.read_thread.new_msg.connect(self.append_msg)
+    #         self.read_thread.conn_ended.connect(self.disconn_update_display)
+    #         self.read_thread.start()
+    #         # read_thread = threading.Thread(target=self.create_read_thread, args=())
+    #         # read_thread.start()
 
-        except Exception as e:
-            print("listen_thread error: " + str(e))
-            # self.end_conn()
-            sock.close()
-            self.disconn_update_display()
-            self.msg_display_area.append("Unexpected error while listening for connections.  Hosting stopped...")
+    #     except Exception as e:
+    #         print("listen_thread error: " + str(e))
+    #         # self.end_conn()
+    #         sock.close()
+    #         self.disconn_update_display()
+    #         self.msg_display_area.append("Unexpected error while listening for connections.  Hosting stopped...")
             
             # pass
     
