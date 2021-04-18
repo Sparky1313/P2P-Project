@@ -6,6 +6,8 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 class App:
     def __init__(self):
+        self.END_CONN_CMD = "!** END_CONNECTION **!"
+
         self.app = QApplication([])
         # self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.my_ip = "127.0.0.1"
@@ -100,7 +102,7 @@ class App:
         self.thumbs_down_btn = QPushButton("\U0001F44E")
         self.smile_btn = QPushButton("\U0001F600")
         self.laugh_btn = QPushButton("\U0001F923")
-        self.cry_btn = QPushButton("\U0001F631")
+        self.cry_btn = QPushButton("\U0001F62D")
         self.angry_btn = QPushButton("\U0001F620")
 
         # ---Initial function calls
@@ -108,7 +110,7 @@ class App:
         self.thumbs_down_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F44E"))
         self.smile_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F600"))
         self.laugh_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F923"))
-        self.cry_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F631"))
+        self.cry_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F62D"))
         self.angry_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F620"))
         
         # ---Layout setup---
@@ -172,21 +174,23 @@ class App:
         self.disable_hosting_components()
         self.end_host_btn.setEnabled(True)
         self.disable_friend_sel_components()
+        self.msg_input_box.setEnabled(True)
+        self.enable_emoji_btns()
 
     
     def end_host(self):
         global sock
 
         # End connection
-        sock.close()
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.my_port = 0
+        try:
+            sock.sendall(self.END_CONN_CMD.encode())
+        except Exception:
+            pass
+
+        self.end_conn()
 
         # Update display
-        self.enable_hosting_components()
-        self.end_host_btn.setDisabled(True)
-        self.enable_friend_sel_components()
-        self.disconnect_btn.setDisabled(True)
+        self.disconn_update_display()
 
     
     # Helper method for changing display
@@ -242,30 +246,50 @@ class App:
             read_thread.start()
 
         except Exception as e:
-            print("Connection unsuccessful" + str(e))
-            self.msg_display_area.append("Connection unsuccessful" + str(e))
+            self.end_conn()
+            self.disconn_update_display()
+            self.msg_display_area.append("Connection unsuccessful:" + str(e))
+            print("conn_to_friend error: " + str(e))
+            return
 
         
         # Update display
         self.disable_friend_sel_components()
         self.disconnect_btn.setEnabled(True)
         self.disable_hosting_components()
+        self.msg_input_box.setEnabled(True)
+        self.enable_emoji_btns()
     
 
     def disconn_from_friend(self):
         global sock
 
         # End connection
-        sock.close()
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.friend_ip = ""
-        self.friend_port = 0
+        sock.sendall(self.END_CONN_CMD)
+        self.end_conn()
 
         # Update display
+        self.disconn_update_display()
+    
+
+    def disconn_update_display(self):
         self.enable_friend_sel_components()
         self.disconnect_btn.setDisabled(True)
         self.enable_hosting_components()
         self.end_host_btn.setDisabled(True)
+        self.msg_input_box.setDisabled(True)
+        self.disable_emoji_btns()
+        self.clear_all_inputs()
+    
+
+    def end_conn(self):
+        global sock
+
+        sock.close()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.friend_ip = ""
+        self.friend_port = 0
+        self.my_port = 0
 
     
     # Helper method for changing display
@@ -282,6 +306,27 @@ class App:
         self.friend_port_input.setDisabled(True)
         self.connect_btn.setDisabled(True)
         self.disconnect_btn.setDisabled(True)
+    
+
+    # Helper method for changing display
+    def enable_emoji_btns(self):
+            self.thumbs_up_btn.setEnabled(True)
+            self.thumbs_down_btn.setEnabled(True)
+            self.smile_btn.setEnabled(True)
+            self.laugh_btn.setEnabled(True)
+            self.cry_btn.setEnabled(True)
+            self.angry_btn.setEnabled(True)
+
+
+    # Helper method for changing display
+    def disable_emoji_btns(self):
+        self.thumbs_up_btn.setDisabled(True)
+        self.thumbs_down_btn.setDisabled(True)
+        self.smile_btn.setDisabled(True)
+        self.laugh_btn.setDisabled(True)
+        self.cry_btn.setDisabled(True)
+        self.angry_btn.setDisabled(True)
+
 
 
     # Clears all input fields
@@ -312,9 +357,20 @@ class App:
     def create_read_thread(self):
         # sock = conn_or_sock # i added
         self.msg_display_area.append("Read thread started...")
-        while True:
-            recieved_message = sock.recv(1024)
-            self.msg_display_area.append("Friend: " + recieved_message.decode())
+        try:
+            while True:
+                recvd_msg = sock.recv(5000)
+
+                if (recvd_msg == self.END_CONN_CMD):
+                    self.end_conn()
+                    return
+
+                self.msg_display_area.append("Friend:\n" + recvd_msg.decode())
+        except Exception:
+            self.end_conn()
+            self.disconn_update_display()
+            self.msg_display_area.append("Unexpected error encounter in connection.  Connection closing...")
+        
 
 
     # def connect_peer(self, sock, peer_address):
@@ -334,8 +390,12 @@ class App:
             read_thread = threading.Thread(target=create_read_thread, args=())
             read_thread.start()
 
-        except Exception:
+        except Exception as e:
+            self.end_conn()
+            self.disconn_update_display()
             self.msg_display_area.append("Connection unsuccessful")
+            print("connect_peer error: " + str(e))
+            
 
     
     def listen_thread(self):
@@ -346,12 +406,15 @@ class App:
             connection, peer_address = sock.accept()
             sock.close() # I added
             sock = connection # I added
-            print ("Connected to: ", peer_address)
+            self.msg_display_area.append("Connected to: ", peer_address)
             read_thread = threading.Thread(target=self.create_read_thread, args=())
             read_thread.start()
 
-        except Exception:
-            sock.close()
+        except Exception as e:
+            self.end_conn()
+            self.disconn_update_display()
+            self.msg_display_area.append("Unexpected error while listening for connections.  Hosting stopped...")
+            print("listen_thread error: " + str(e))
     
 # Makes sure threads and sockets close after the window closes
 def on_exit_cleanup():
