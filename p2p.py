@@ -165,7 +165,7 @@ class App:
         # Bind socket and start listening
         self.my_port = data
         sock.bind((self.my_ip, self.my_port))
-        listen_thread = threading.Thread(target=self.listen_thread, args=(sock, ))
+        listen_thread = threading.Thread(target=self.listen_thread, args=())
         listen_thread.start()
 
         # Update display
@@ -270,10 +270,10 @@ class App:
     
     # Helper method for changing display
     def enable_friend_sel_components(self):
-            self.friend_ip_input.setEnabled(True)
-            self.friend_port_input.setEnabled(True)
-            self.connect_btn.setEnabled(True)
-            self.disconnect_btn.setEnabled(True)
+        self.friend_ip_input.setEnabled(True)
+        self.friend_port_input.setEnabled(True)
+        self.connect_btn.setEnabled(True)
+        self.disconnect_btn.setEnabled(True)
 
 
     # Helper method for changing display
@@ -299,6 +299,8 @@ class App:
         if not msg.isspace() and msg != '':
             self.msg_display_area.append("Me: " + msg)
         
+        sock.sendall(msg.encode())
+        
         self.msg_input_box.clear()
 
 
@@ -309,10 +311,10 @@ class App:
 
 
     def create_read_thread(self, conn_or_sock):
-        sock = conn_or_sock # i added
+        # sock = conn_or_sock # i added
         self.msg_display_area.append("Read thread started...")
         while True:
-            recieved_message = conn_or_sock.recv(1024)
+            recieved_message = sock.recv(1024)
             print (recieved_message.decode())
 
 
@@ -337,8 +339,9 @@ class App:
             self.msg_display_area.append("Connection unsuccessful")
 
     
-    def listen_thread(self, sock):
-        # global connection
+    def listen_thread(self):
+        global sock
+
         try:
             sock.listen(1)
             connection, peer_address = sock.accept()
