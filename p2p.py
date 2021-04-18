@@ -7,7 +7,6 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 class App:
     def __init__(self):
         self.app = QApplication([])
-        self.app_still_running = True
         # self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.my_ip = "127.0.0.1"
         self.my_port = 0
@@ -15,20 +14,25 @@ class App:
         self.friend_port = 0
 
 
-        # My selection components and layout
+        '''Components and Layout'''
+
+        # Hosting components and layout
         # Components
         self.my_port_input = QLineEdit("Enter your port to run on...")
         self.my_port_input_lbl = QLabel("Enter your port number:")
-        self.sign_in_btn = QPushButton("Host")
-        self.sign_in_btn = QPushButton("End Hosting")
+        self.start_host_btn = QPushButton("Host")
+        self.end_host_btn = QPushButton("End Hosting")
 
         self.my_port_input_lbl.setBuddy(self.my_port_input)
-        self.sign_in_btn.clicked.connect(self.sign_in)
+        self.start_host_btn.clicked.connect(self.start_host)
+        self.end_host_btn.clicked.connect(self.end_host)
+        self.end_host_btn.setDisabled(True)
 
         my_sel_layout = QHBoxLayout()
         my_sel_layout.addWidget(self.my_port_input_lbl)
         my_sel_layout.addWidget(self.my_port_input)
-        my_sel_layout.addWidget(self.sign_in_btn)
+        my_sel_layout.addWidget(self.start_host_btn)
+        my_sel_layout.addWidget(self.end_host_btn)
 
 
         # Friend selection components and layout
@@ -38,11 +42,14 @@ class App:
         self.friend_ip_input_lbl = QLabel("Enter friend's IP Address:")
         self.friend_port_input_lbl = QLabel("Enter friend's port number:")
         self.connect_btn = QPushButton("Connect")
-        self.end_btn = QPushButton("End Connection")
+        self.disconnect_btn = QPushButton("End Connection")
 
         self.friend_ip_input_lbl.setBuddy(self.friend_ip_input)
         self.friend_port_input_lbl.setBuddy(self.friend_port_input)
         self.connect_btn.clicked.connect(self.conn_to_friend)
+        self.disconnect_btn.clicked.connect(self.disconn_from_friend)
+        self.enable_friend_sel_components()
+        self.disconnect_btn.setDisabled(True)
         
 
         # Layout
@@ -52,7 +59,7 @@ class App:
         friend_sel_layout.addWidget(self.friend_port_input_lbl)
         friend_sel_layout.addWidget(self.friend_port_input)
         friend_sel_layout.addWidget(self.connect_btn)
-        friend_sel_layout.addWidget(self.end_btn)
+        friend_sel_layout.addWidget(self.disconnect_btn)
         
 
         # Start and end connection components and layout
@@ -102,7 +109,7 @@ class App:
         self.cry_btn = QPushButton("\U0001F631")
         self.angry_btn = QPushButton("\U0001F620")
 
-        # self.smile_btn.clicked.connect(self.smile_btn_clicked)
+      
         self.thumbs_up_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F44D"))
         self.thumbs_down_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F44E"))
         self.smile_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F600"))
@@ -110,8 +117,6 @@ class App:
         self.cry_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F631"))
         self.angry_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F620"))
         
-
-
         # Layout
         emoji_layout = QHBoxLayout()
         emoji_layout.addWidget(self.thumbs_up_btn)
@@ -120,7 +125,6 @@ class App:
         emoji_layout.addWidget(self.laugh_btn)
         emoji_layout.addWidget(self.cry_btn)
         emoji_layout.addWidget(self.angry_btn)
-
 
 
         # Window layout
@@ -138,8 +142,10 @@ class App:
         self.window.setWindowTitle("P2P Chat App")
         self.window.show()
 
-    #Widget callbacks
-    def sign_in(self):
+
+    '''Widget callbacks'''
+
+    def start_host(self):
         str_data = self.my_port_input.text()
         data = 0
 
@@ -164,22 +170,35 @@ class App:
 
         # start listening
         listen_thread = threading.Thread(target=self.listen_thread, args=(sock, ))
-        listen_thread.setDaemon(True)
+        # listen_thread.setDaemon(True)
         listen_thread.start()
         # listen_thread.join()
 
         self.disable_hosting_components()
+        self.end_host_btn.setEnabled(True)
         self.disable_friend_sel_components()
+
     
+    def end_host(self):
+        sock.close()
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        self.enable_hosting_components()
+        self.end_host_btn.setDisabled(True)
+        self.enable_friend_sel_components()
+        self.disconnect_btn.setDisabled(True)
+
 
     def enable_hosting_components(self):
         self.my_port_input.setEnabled(True)
-        self.sign_in_btn.setEnabled(True)
+        self.start_host_btn.setEnabled(True)
+        self.end_host_btn.setEnabled(True)
 
     
     def disable_hosting_components(self):
         self.my_port_input.setDisabled(True)
-        self.sign_in_btn.setDisabled(True)
+        self.start_host_btn.setDisabled(True)
+        self.end_host_btn.setDisabled(True)
 
 
     def conn_to_friend(self):
@@ -209,20 +228,39 @@ class App:
             return
         
         self.disable_friend_sel_components()
+        self.disconnect_btn.setEnabled(True)
+        self.disable_hosting_components()
+    
+
+    def disconn_from_friend(self):
+        sock.close()
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.enable_friend_sel_components()
+        self.disconnect_btn.setDisabled(True)
+        self.enable_hosting_components()
+        self.end_host_btn.setDisabled(True)
 
     
     def enable_friend_sel_components(self):
             self.friend_ip_input.setEnabled(True)
             self.friend_port_input.setEnabled(True)
             self.connect_btn.setEnabled(True)
-            self.end_btn.setEnabled(True)
+            self.disconnect_btn.setEnabled(True)
 
 
     def disable_friend_sel_components(self):
         self.friend_ip_input.setDisabled(True)
         self.friend_port_input.setDisabled(True)
         self.connect_btn.setDisabled(True)
-        self.end_btn.setDisabled(True)
+        self.disconnect_btn.setDisabled(True)
+    
+
+    def clear_all_inputs(self):
+        self.my_port_input.clear()
+        self.friend_ip_input.clear()
+        self.friend_port_input.clear()
+        self.msg_display_area.clear()
+        self.msg_input_box.clear()
     
     
     def enter_msg(self):
@@ -272,7 +310,7 @@ class App:
         except Exception:
             sock.close()
     
-
+# Makes sure threads and sockets close after the window closes
 def on_exit_cleanup():
     sock.close()
         
@@ -281,6 +319,8 @@ if __name__ == "__main__":
     app = App()
     atexit.register(on_exit_cleanup)
     app.app.exec_()
+
+    # Makes sure threads and sockets close after the window closes
     sock.close()
     
     # window = Window()
