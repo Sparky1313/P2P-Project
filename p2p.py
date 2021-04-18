@@ -238,7 +238,7 @@ class App:
         try:
             sock.connect((self.friend_ip, self.friend_port))
             self.msg_display_area.append("Connection successful")
-            read_thread = threading.Thread(target=self.create_read_thread, args=(sock, ))
+            read_thread = threading.Thread(target=self.create_read_thread, args=())
             read_thread.start()
 
         except Exception as e:
@@ -305,17 +305,16 @@ class App:
 
 
     def emoji_btn_clicked(self, emoji_str):
-        sock.close()
         msg = msg = self.msg_input_box.text()
         self.msg_input_box.setText(msg + emoji_str)
 
 
-    def create_read_thread(self, conn_or_sock):
+    def create_read_thread(self):
         # sock = conn_or_sock # i added
         self.msg_display_area.append("Read thread started...")
         while True:
             recieved_message = sock.recv(1024)
-            print (recieved_message.decode())
+            self.msg_display_area.append("Friend: " + recieved_message.decode())
 
 
     # def connect_peer(self, sock, peer_address):
@@ -332,7 +331,7 @@ class App:
         try:
             sock.connect((self.friend_ip, self.friend_port))
             self.msg_display_area.append("Connection successful")
-            read_thread = threading.Thread(target=create_read_thread, args=(sock, ))
+            read_thread = threading.Thread(target=create_read_thread, args=())
             read_thread.start()
 
         except Exception:
@@ -348,7 +347,7 @@ class App:
             sock.close() # I added
             sock = connection # I added
             print ("Connected to: ", peer_address)
-            read_thread = threading.Thread(target=self.create_read_thread, args=(sock, ))
+            read_thread = threading.Thread(target=self.create_read_thread, args=())
             read_thread.start()
 
         except Exception:
