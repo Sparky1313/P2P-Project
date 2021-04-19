@@ -48,6 +48,9 @@ class ReadThread(QThread):
 
 class ListenThread(QThread):
     new_thread = pyqtSignal()
+    req_end = pyqtSignal()
+    sent_err_msg = pyqtSignal(str)
+
 
     def __init__(self):
         QThread.__init__(self)
@@ -73,14 +76,13 @@ class ListenThread(QThread):
 
         except Exception as e:
             print("listen_thread error: " + str(e))
+            self.req_end.emit()
             # self.end_conn()
-            sock.close()
-            self.disconn_update_display()
-            self.msg_display_area.append("Unexpected error while listening for connections.  Hosting stopped...")
+            # sock.close()
+            # self.disconn_update_display()
+            self.sent_err_msg.emit("Unexpected error while listening for connections.  Hosting stopped...")
 
     
-
-
 
 class App:
     def __init__(self):
@@ -269,11 +271,11 @@ class App:
         except Exception:
             pass
 
-        # self.end_conn()
-        sock.close()
+        self.end_conn()
+        # sock.close()
 
         # Update display
-        self.disconn_update_display()
+        # self.disconn_update_display()
 
     
     # Helper method for changing display
@@ -331,9 +333,9 @@ class App:
 
         except Exception as e:
             print("conn_to_friend error: " + str(e))
-            # self.end_conn()
-            sock.close()
-            self.disconn_update_display()
+            self.end_conn()
+            # sock.close()
+            # self.disconn_update_display()
             self.msg_display_area.append("Connection unsuccessful:" + str(e))
             return
 
@@ -351,11 +353,11 @@ class App:
 
         # End connection
         sock.sendall(self.END_CONN_CMD.encode())
-        # self.end_conn()
-        sock.close()
+        self.end_conn()
+        # sock.close()
 
         # Update display
-        self.disconn_update_display()
+        # self.disconn_update_display()
     
 
     def disconn_update_display(self):
@@ -453,7 +455,7 @@ class App:
     def create_read_thread(self):
         self.read_thread = ReadThread(self.END_CONN_CMD, self.END_CONN_CMD_ACK)
         self.read_thread.new_msg.connect(self.append_msg)
-        self.read_thread.req_end.connect(self.disconn_update_display)
+        self.read_thread.req_end.connect(self.end_conn)
         self.read_thread.start()
 
     # def create_read_thread(self):
