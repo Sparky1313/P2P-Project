@@ -16,11 +16,9 @@ class ReadThread(QThread):
     
 
     def run(self):
-        # self.msg_display_area.append("Read thread started...")
         try:
             while True:
                 recvd_msg = sock.recv(5000)
-                print("waiting for message")
                 msg = recvd_msg.decode()
 
                 if msg == self.end_cmd:
@@ -31,24 +29,17 @@ class ReadThread(QThread):
                 if msg == self.end_cmd_ack:
                     self.req_end.emit()
                 
-                print("going to emit new message")
                 self.new_msg.emit("Friend:\n" + msg)
-                print("emitted new message")
-                # self.msg_display_area.append("Friend:\n" + msg)
         except Exception as e:
             print("reate_read_thread error: " + str(e))
-            # sock.close()
             self.req_end.emit()
-            # self.end_conn()
-            # self.disconn_update_display()
-            # self.msg_display_area.append("Unexpected error encounter in connection.  Connection closing...")
             return
-            # pass
 
 
 class ListenThread(QThread):
     new_thread = pyqtSignal()
     req_end = pyqtSignal()
+    conn_made = pyqtSignal(str)
     sent_err_msg = pyqtSignal(str)
 
 
@@ -62,24 +53,13 @@ class ListenThread(QThread):
         try:
             sock.listen(1)
             connection, peer_address = sock.accept()
-            print(peer_address)
-            sock.close() # I added
-            sock = connection # I added
+            sock.close()
+            sock = connection
+            self.conn_made.emit(peer_address[0] + ":" + str(peer_address[1]) + " CONNECTED")
             self.new_thread.emit()
-            # self.msg_display_area.append("Connected to: " + peer_address[0] + ":" + str(peer_address[1]))
-            # self.read_thread = ReadThread(self.END_CONN_CMD)
-            # self.read_thread.new_msg.connect(self.append_msg)
-            # self.read_thread.conn_ended.connect(self.disconn_update_display)
-            # self.read_thread.start()
-            # read_thread = threading.Thread(target=self.create_read_thread, args=())
-            # read_thread.start()
-
         except Exception as e:
             print("listen_thread error: " + str(e))
             self.req_end.emit()
-            # self.end_conn()
-            # sock.close()
-            # self.disconn_update_display()
             self.sent_err_msg.emit("Unexpected error while listening for connections.  Hosting stopped...")
 
     
@@ -90,7 +70,6 @@ class App:
         self.END_CONN_CMD_ACK = "!** END_ACK **!"
 
         self.app = QApplication([])
-        # self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.my_ip = "127.0.0.1"
         self.my_port = 0
         self.friend_ip = ""
@@ -164,6 +143,7 @@ class App:
         self.msg_display_area.setReadOnly(True)
         self.msg_input_box.returnPressed.connect(self.enter_msg)
         self.msg_input_box_lbl.setBuddy(self.msg_input_box)
+        self.msg_input_box.setDisabled(True)
 
         # ---Layout setup---
         msg_input_layout = QHBoxLayout()
@@ -193,6 +173,7 @@ class App:
         self.laugh_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F923"))
         self.cry_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F62D"))
         self.angry_btn.clicked.connect(lambda: self.emoji_btn_clicked("\U0001F620"))
+        self.disable_emoji_btns()
         
         # ---Layout setup---
         emoji_layout = QHBoxLayout()
@@ -236,13 +217,11 @@ class App:
         try:
             data = int(str_data)
         except Exception:
-            self.msg_display_area.append("ERROR: Your port number entered is not an integer.  Port number must be an integer between 1024 to 49151.")
+            self.append_msg("ERROR: Your port number entered is not an integer.  Port number must be an integer between 1024 to 49151.")
             return
         
-        if data >= 1024 and data <= 49151:
-            self.msg_display_area.append("Hooray")
-        else:
-            self.msg_display_area.append("Invalid input for your port number.  Must be between 1024 to 49151")
+        if data < 1024 or data > 49151:
+            self.append_msg("ERROR: Invalid input for your port number.  Must be between 1024 to 49151.")
             return
         
         # Bind socket and start listening
@@ -250,9 +229,8 @@ class App:
         sock.bind((self.my_ip, self.my_port))
         self.listen_thread = ListenThread()
         self.listen_thread.new_thread.connect(self.create_read_thread)
+        self.listen_thread.conn_made.connect(self.append_msg)
         self.listen_thread.start()
-        # listen_thread = threading.Thread(target=self.listen_thread, args=())
-        # listen_thread.start()
 
         # Update display
         self.disable_hosting_components()
@@ -272,10 +250,6 @@ class App:
             pass
 
         self.end_conn()
-        # sock.close()
-
-        # Update display
-        # self.disconn_update_display()
 
     
     # Helper method for changing display
@@ -301,23 +275,19 @@ class App:
         ip_regex_str = re.compile("^(([0-2][0-5][0-5]|[0-1]\d{2}|\d{1,2})\.){3}([0-2][0-5][0-5]|[01]\d{2}|\d{1,2})$")
 
         # Check if IP address entered is valid
-        if ip_regex_str.match(ip):
-            self.msg_display_area.append("Good IP address")
-        else:
-            self.msg_display_area.append("Invalid IP address.  Formatting must be of type XXX.XXX.XXX.XXX and be within 0.0.0.0 to 255.255.255.255")
+        if not ip_regex_str.match(ip):
+            self.append_msg("ERROR: Invalid IP address.  Formatting must be of type XXX.XXX.XXX.XXX and be within 0.0.0.0 to 255.255.255.255")
             return
 
         # Check if port number entered is valid
         try:
             port = int(port_input)
         except Exception:
-            self.msg_display_area.append("ERROR: Friend port number entered is not an integer.  Port number must be an integer.")
+            self.append_msg("ERROR: Friend port number entered is not an integer.  Port number must be an integer.")
             return
         
-        if port >= 1024 and port <= 49151:
-            self.msg_display_area.append("Hooray")
-        else:
-            self.msg_display_area.append("Invalid input for friend port number.  Must be between 1024 to 49151")
+        if port < 1024 or port > 49151:
+            self.append_msg("ERROR: Invalid input for your port number.  Must be between 1024 to 49151.")
             return
         
         # Connect to peer
@@ -326,17 +296,12 @@ class App:
 
         try:
             sock.connect((self.friend_ip, self.friend_port))
-            self.msg_display_area.append("Connection successful")
+            self.append_msg("CONNECTION SUCCESSFUL")
             self.create_read_thread()
-            # read_thread = threading.Thread(target=self.create_read_thread, args=())
-            # read_thread.start()
-
         except Exception as e:
             print("conn_to_friend error: " + str(e))
             self.end_conn()
-            # sock.close()
-            # self.disconn_update_display()
-            self.msg_display_area.append("Connection unsuccessful:" + str(e))
+            self.append_msg("CONNECTION UNSUCCESSFUL:" + str(e))
             return
 
         
@@ -354,10 +319,6 @@ class App:
         # End connection
         sock.sendall(self.END_CONN_CMD.encode())
         self.end_conn()
-        # sock.close()
-
-        # Update display
-        # self.disconn_update_display()
     
 
     def disconn_update_display(self):
@@ -371,14 +332,13 @@ class App:
     
 
     def append_msg(self, msg):
-        self.msg_display_area.append(msg)
+        self.msg_display_area.append(msg + "\n")
 
 
     def end_conn(self):
         global sock
 
         try:
-
             sock.close()
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.friend_ip = ""
@@ -425,7 +385,6 @@ class App:
         self.angry_btn.setDisabled(True)
 
 
-
     # Clears all input fields
     def clear_all_inputs(self):
         self.my_port_input.clear()
@@ -439,11 +398,9 @@ class App:
         msg = self.msg_input_box.text()
 
         if not msg.isspace() and msg != '':
-            self.msg_display_area.append("Me: " + msg)
+            self.append_msg("Me:\n" + msg)
         
         sock.sendall(msg.encode())
-        print("sending message")
-        
         self.msg_input_box.clear()
 
 
@@ -458,82 +415,7 @@ class App:
         self.read_thread.req_end.connect(self.end_conn)
         self.read_thread.start()
 
-    # def create_read_thread(self):
-    #     # sock = conn_or_sock # i added
-    #     self.msg_display_area.append("Read thread started...")
-    #     try:
-    #         while True:
-    #             recvd_msg = sock.recv(5000)
-    #             msg = recvd_msg.decode()
 
-    #             if (msg == self.END_CONN_CMD):
-    #                 # self.end_conn()
-    #                 sock.close()
-    #                 self.disconn_update_display()
-    #                 return
-
-    #             self.msg_display_area.append("Friend:\n" + msg)
-    #     except Exception as e:
-    #         print("reate_read_thread error: " + str(e))
-    #         # self.end_conn()
-    #         # self.disconn_update_display()
-    #         # self.msg_display_area.append("Unexpected error encounter in connection.  Connection closing...")
-    #         return
-    #         # pass
-        
-
-
-    # def connect_peer(self, sock, peer_address):
-    #     try:
-    #         sock.connect(peer_address)
-    #         print ("Connection successful")
-    #         read_thread = threading.Thread(target=create_read_thread, args=(sock, ))
-    #         read_thread.start()
-
-    #     except Exception:
-    #         print ("Connection unsuccessful")
-
-    # def connect_peer(self):
-    #     try:
-    #         sock.connect((self.friend_ip, self.friend_port))
-    #         self.msg_display_area.append("Connection successful")
-    #         read_thread = threading.Thread(target=create_read_thread, args=())
-    #         read_thread.start()
-
-    #     except Exception as e:
-    #         # self.end_conn()
-    #         # self.disconn_update_display()
-    #         # self.msg_display_area.append("Connection unsuccessful")
-    #         # print("connect_peer error: " + str(e))
-    #         pass
-            
-
-    
-    # def listen_thread(self):
-    #     global sock
-
-    #     try:
-    #         sock.listen(1)
-    #         connection, peer_address = sock.accept()
-    #         print(peer_address)
-    #         sock.close() # I added
-    #         sock = connection # I added
-    #         self.msg_display_area.append("Connected to: " + peer_address[0] + ":" + str(peer_address[1]))
-    #         self.read_thread = ReadThread(self.END_CONN_CMD)
-    #         self.read_thread.new_msg.connect(self.append_msg)
-    #         self.read_thread.conn_ended.connect(self.disconn_update_display)
-    #         self.read_thread.start()
-    #         # read_thread = threading.Thread(target=self.create_read_thread, args=())
-    #         # read_thread.start()
-
-    #     except Exception as e:
-    #         print("listen_thread error: " + str(e))
-    #         # self.end_conn()
-    #         sock.close()
-    #         self.disconn_update_display()
-    #         self.msg_display_area.append("Unexpected error while listening for connections.  Hosting stopped...")
-            
-            # pass
     
 # Makes sure threads and sockets close after the window closes
 def on_exit_cleanup():
@@ -547,89 +429,3 @@ if __name__ == "__main__":
 
     # Makes sure threads and sockets close after the window closes
     sock.close()
-    
-    # window = Window()
-    # window.show()
-    # sys.exit(app.exec_())
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# #boolean to indicate if this peer is acting as the server or not
-# connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# is_server = False
-
-# #get the name and port the user wants to use
-# name = input("Input user name: ")
-# self_port = int(input("Enter the port number you want to use: "))
-
-# self_address = ("127.0.0.1", self_port)
-
-# #create a tcp socket
-# sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# sock.bind(self_address)
-
-# response = input("Do you want to host? (Y/N)")
-
-# if response == "Y":
-#     listen_thread = threading.Thread(target=listen_thread, args=(sock, ))
-#     listen_thread.start()
-#     listen_thread.join()
-#     is_server = True
-# elif response == "N":
-#     #ask the user which port they want to connect to to chat with
-#     peer_port = int(input("Which Port Do You Want To Chat With? "))
-#     peer_address = ("127.0.0.1", peer_port)
-#     connect(sock, peer_address)
-# else:
-#     print ("invalid input")
-
-
-
-# #constantly let the user send messages to the other peer. Send logic also differs from client and server, so need to use the is_server boolean here too
-# while True:
-#     message = input()
-#     # if is_server != False:
-#     #     connection.sendall(message.encode())
-#     # else:
-#     sock.sendall(message.encode())
-
-
-
-
-
-'''
-is_server = False
-
-    #try to connect to that port. If connection fails it isn't set up yet, and the use should instead listen for a connection from the peer
-    try:
-        sock.connect(peer_address)
-        print ("Connection successful")
-
-    except:
-        print ("Peer not set up, listening instead...")
-        sock.listen(1)
-        connection, peer_address = sock.accept()
-        print ("Connected to: ", peer_address)
-        is_server = True
-
-    #now spawn a thread to constantly read incoming messages. Read logic differs between client and server, so need to use the is_server boolean
-    if is_server == True:
-        read_thread = threading.Thread(target=create_read_thread, args=(connection, ))
-    else:  
-        read_thread = threading.Thread(target=create_read_thread, args=(sock, ))
-
-    read_thread.start()
-'''
-
-
