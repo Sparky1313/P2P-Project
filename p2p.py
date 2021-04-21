@@ -4,7 +4,8 @@ from PyQt5.QtWidgets import QApplication, QDialog, QInputDialog, QHBoxLayout, QW
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-
+# A QThread that reads incoming messages and lets the main thread
+# know that the messages need to be append to the message display area.
 class ReadThread(QThread):
     new_msg = pyqtSignal(str)
     req_end = pyqtSignal()
@@ -28,19 +29,23 @@ class ReadThread(QThread):
                 
                 if msg == self.end_cmd_ack:
                     self.req_end.emit()
+                    return
                 
                 self.new_msg.emit("Friend:\n" + msg)
         except Exception as e:
-            print("reate_read_thread error: " + str(e))
+            # print("reate_read_thread error: " + str(e))
             self.req_end.emit()
             return
 
 
+
+# A QThread that listens for sockets trying to make a connection
+# when the user is the host.
 class ListenThread(QThread):
     new_thread = pyqtSignal()
     req_end = pyqtSignal()
     conn_made = pyqtSignal(str)
-    sent_err_msg = pyqtSignal(str)
+    sent_err_msg = pyqtSignal(str) # This component is not hooked up
 
 
     def __init__(self):
@@ -58,18 +63,18 @@ class ListenThread(QThread):
             self.conn_made.emit(peer_address[0] + ":" + str(peer_address[1]) + " CONNECTED")
             self.new_thread.emit()
         except Exception as e:
-            print("listen_thread error: " + str(e))
+            # print("listen_thread error: " + str(e))
             self.req_end.emit()
             self.sent_err_msg.emit("Unexpected error while listening for connections.  Hosting stopped...")
 
     
-
+# The main application gui and logic
 class App:
     def __init__(self):
         self.END_CONN_CMD = "!** END_CONNECTION **!"
         self.END_CONN_CMD_ACK = "!** END_ACK **!"
 
-        self.app = QApplication([])
+        self.q_app = QApplication([])
         self.my_ip = "127.0.0.1"
         self.my_port = 0
         self.friend_ip = ""
@@ -89,7 +94,7 @@ class App:
         # ---Initial function calls---
         self.my_port_input_lbl.setBuddy(self.my_port_input)
         self.start_host_btn.clicked.connect(self.start_host)
-        self.end_host_btn.clicked.connect(self.end_host)
+        self.end_host_btn.clicked.connect(self.send_end)
         self.end_host_btn.setDisabled(True)
 
         # ---Layout setup---
@@ -116,7 +121,7 @@ class App:
         self.friend_ip_input_lbl.setBuddy(self.friend_ip_input)
         self.friend_port_input_lbl.setBuddy(self.friend_port_input)
         self.connect_btn.clicked.connect(self.conn_to_friend)
-        self.disconnect_btn.clicked.connect(self.disconn_from_friend)
+        self.disconnect_btn.clicked.connect(self.send_end)
         self.enable_friend_sel_components()
         self.disconnect_btn.setDisabled(True)
 
@@ -207,8 +212,10 @@ class App:
         ''' End components and layout '''
 
 
-    '''Widget callbacks'''
+    '''Widget callbacks and application functions'''
 
+    # Ensures a valid entry is made for hosting and
+    # makes the user listen for connections on the specified port number
     def start_host(self):
         str_data = self.my_port_input.text()
         data = 0
@@ -239,8 +246,10 @@ class App:
         self.msg_input_box.setEnabled(True)
         self.enable_emoji_btns()
 
-    
-    def end_host(self):
+    # Sends out a message that let's the connected friend
+    # know that the user is ending the connection and then
+    # starts the process of ending the connection.
+    def send_end(self):
         global sock
 
         # End connection
@@ -299,7 +308,7 @@ class App:
             self.append_msg("CONNECTION SUCCESSFUL")
             self.create_read_thread()
         except Exception as e:
-            print("conn_to_friend error: " + str(e))
+            # print("conn_to_friend error: " + str(e))
             self.end_conn()
             self.append_msg("CONNECTION UNSUCCESSFUL:" + str(e))
             return
@@ -311,16 +320,10 @@ class App:
         self.disable_hosting_components()
         self.msg_input_box.setEnabled(True)
         self.enable_emoji_btns()
+ 
     
-
-    def disconn_from_friend(self):
-        global sock
-
-        # End connection
-        sock.sendall(self.END_CONN_CMD.encode())
-        self.end_conn()
-    
-
+    # Updates the display appropriately when the connection
+    # between user and friend is ended.
     def disconn_update_display(self):
         self.enable_friend_sel_components()
         self.disconnect_btn.setDisabled(True)
@@ -331,10 +334,14 @@ class App:
         self.clear_all_inputs()
     
 
+    # Appends the msg parameter to the message display area.
     def append_msg(self, msg):
         self.msg_display_area.append(msg + "\n")
 
 
+    # Closes the socket being used for connections, 
+    # resets corresponding variables involved in the connection,
+    # and updates the display to reflect the disconnection.
     def end_conn(self):
         global sock
 
@@ -393,7 +400,9 @@ class App:
         self.msg_display_area.clear()
         self.msg_input_box.clear()
     
-    
+
+    # Handles validation of entry, sends message to friend, and
+    # ensures the message is displayed on screen.
     def enter_msg(self):
         msg = self.msg_input_box.text()
 
@@ -404,11 +413,13 @@ class App:
         self.msg_input_box.clear()
 
 
+    # Adds the emoji to the user's message
     def emoji_btn_clicked(self, emoji_str):
         msg = msg = self.msg_input_box.text()
         self.msg_input_box.setText(msg + emoji_str)
 
-    
+
+    # Creates and starts a thread where the socket reads incoming messages.
     def create_read_thread(self):
         self.read_thread = ReadThread(self.END_CONN_CMD, self.END_CONN_CMD_ACK)
         self.read_thread.new_msg.connect(self.append_msg)
@@ -425,7 +436,7 @@ def on_exit_cleanup():
 if __name__ == "__main__":
     app = App()
     atexit.register(on_exit_cleanup)
-    app.app.exec_()
+    app.q_app.exec_()
 
     # Makes sure threads and sockets close after the window closes
     sock.close()
